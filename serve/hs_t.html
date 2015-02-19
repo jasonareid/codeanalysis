@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  margin: auto;
+  position: relative;
+  width: 960px;
+}
+
+form {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.node {
+  border: solid 1px white;
+  font: 10px sans-serif;
+  line-height: 12px;
+  overflow: hidden;
+  position: absolute;
+  text-indent: 2px;
+}
+
+</style>
+<body>
+<script src="d3/d3.min.js"></script>
+<script>
+
+var margin = 10,
+    outerDiameter = 1200,
+    innerDiameter = outerDiameter - margin - margin;
+
+var x = d3.scale.linear()
+    .range([0, innerDiameter]);
+
+var y = d3.scale.linear()
+    .range([0, innerDiameter]);
+
+var color = d3.scale.linear()
+    .domain([-1, 5])
+    .range(["hsl(185,60%,99%)", "hsl(187,40%,70%)"])
+    .interpolate(d3.interpolateHcl);
+
+var treemap = d3.layout.treemap().sort(function(a,b){return a.size - b.size;})
+    .padding(2)
+    .sticky(true)
+    .size([innerDiameter, innerDiameter])
+    .value(function(d) { return Math.max(0.01, d.size); })
+
+ /*
+d3.json("json/im_all_hotspot.json", function(error, root) {
+  var focus = root,
+      nodes = pack.nodes(root);
+
+  svg.append("g").selectAll("circle")
+      .data(nodes)
+    .enter().append("circle")
+      .attr("class", function(d) { return d.parent ? d.children ? "node" : "node node--leaf" : "node node--root"; })
+      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+      .attr("r", function(d) { return d.r; })
+      .style("fill", function(d) { return d.weight > 0.0 ? "darkred" : d.children ? color(d.depth) : "WhiteSmoke"; })
+      .style("fill-opacity", function(d) { return d.weight; })
+      .on("click", function(d) { return zoom(focus == d ? root : d); });
+
+  svg.append("g").selectAll("text")
+      .data(nodes)
+    .enter().append("text")
+      .attr("id", function(d) { return "label-" + d.name.replace(".", "_"); })
+      .attr("class", "label")
+      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+      .style("fill-opacity", function(d) { return d.parent === root ? 1 : 0; })
+      .style("display", function(d) { return d.parent === root ? null : "none"; })
+      .text(function(d) { return d.children && d.children.length > 0 ? d.name : d.name + ", size=" + d.size + ", revs=" + d.revs; });
+
+  d3.selectAll(".node--leaf")
+      .on("mouseover", 
+        function(d) {
+            d3.select("#label-" + d.name.replace(".", "_")).classed("loud", true);
+        }
+      ).on("mouseout",
+        function(d) {
+            d3.select("#label-" + d.name.replace(".", "_")).classed("loud", false);
+        }
+      );
+
+  d3.select(window)
+      .on("click", function() { zoom(root); });
+
+  function zoom(d, i) {
+    var focus0 = focus;
+    focus = d;
+
+    var k = innerDiameter / d.r / 2;
+    x.domain([d.x - d.r, d.x + d.r]);
+    y.domain([d.y - d.r, d.y + d.r]);
+    d3.event.stopPropagation();
+
+    var transition = d3.selectAll("text,circle").transition()
+        .duration(d3.event.altKey ? 7500 : 750)
+        .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+
+    transition.filter("circle")
+        .attr("r", function(d) { return k * d.r; });
+
+    transition.filter("text")
+      .filter(function(d) { return d === focus || d.parent === focus || d.parent === focus0; })
+        .style("fill-opacity", function(d) { return d.parent === focus || d === focus ? 1 : 0; })
+        .each("start", function(d) { if (d === focus || d.parent === focus) this.style.display = "inline"; })
+        .each("end", function(d) { if (d !== focus && d.parent !== focus) this.style.display = "none"; });
+  }}
+);*/
+var width = outerDiameter;
+var height = outerDiameter;
+var div = d3.select("body").append("div")
+    .style("position", "relative")
+    .style("width", (width + margin.left + margin.right) + "px")
+    .style("height", (height + margin.top + margin.bottom) + "px")
+    .style("left", margin.left + "px")
+    .style("top", margin.top + "px");
+
+d3.json("json/im_tags_hotspot.json", function(error, root) {
+  var node = div.datum(root).selectAll(".node")
+      .data(treemap.nodes)
+    .enter().append("div")
+      .attr("class", "node")
+      .call(position)
+      .style("background", function(d) { return d.children ? color(d.name) : null; })
+      .text(function(d) { return d.children ? null : d.name; });
+
+  d3.selectAll("input").on("change", function change() {
+    var value = this.value === "count"
+        ? function() { return 1; }
+        : function(d) { return d.size; };
+
+    node
+        .data(treemap.value(value).nodes)
+      .transition()
+        .duration(1500)
+        .call(position);
+  });
+});
+function position() {
+  this.style("left", function(d) { return d.x + "px"; })
+      .style("top", function(d) { return d.y + "px"; })
+      .style("width", function(d) { return Math.max(0, d.dx - 1) + "px"; })
+      .style("height", function(d) { return Math.max(0, d.dy - 1) + "px"; });
+}
+
+d3.select(self.frameElement).style("height", outerDiameter + "px");
+
+</script>
